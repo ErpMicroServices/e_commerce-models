@@ -23,3 +23,4 @@ hs_err_pid*
 /.idea/
 /e_commerce-models.iml
 /e_commerce_models.iml
+/target/
