@@ -1,12 +1,18 @@
 package erp_microservices.e_commerce.models.login;
 
+import erp_microservices.jpa.converters.OptionToUuidConverter;
 import erp_microservices.model.PersistentEntity;
+import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.NotEmpty;
+import fj.data.Option;
 
 import javax.persistence.*;
 import java.util.*;
 
 import static erp_microservices.encryption.Encrypter.encrypt;
+import static fj.data.Option.fromNull;
+import static fj.data.Option.none;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 /**
  * The login for a user also specifies which pages, or web addresses that login
@@ -18,11 +24,7 @@ import static erp_microservices.encryption.Encrypter.encrypt;
  */
 @SuppressWarnings("serial")
 @Entity
-@NamedQueries(@NamedQuery(name = "findByUserId", query = "select ul from UserLogin ul where ul.userId = :userId"))
 public class UserLogin extends PersistentEntity {
-
-	public static final String FIND_BY_USER_ID_QUERY = "findByUserId";
-	public static final String USER_ID_PARAM = "userId";
 
 	private boolean active = false;
 
@@ -34,49 +36,64 @@ public class UserLogin extends PersistentEntity {
 	private List<LoginAccountHistory> having = new ArrayList<LoginAccountHistory>();
 
 	/**
-	 * UUID for Party.
+	 * UUID for Party the user login belongs to.
 	 */
-	private UUID loginFor;
+	@Convert(converter = OptionToUuidConverter.class)
+	private Option<UUID> loginFor = none();
 
 	/**
-	 * UUID for WebAddress.
+	 * UUID for WebAddress this login is for.
 	 */
-	private UUID loginTo;
+	@Convert(converter = OptionToUuidConverter.class)
+	private Option<UUID> loginTo = none();
 
-	private String password;
+	/**
+	 * The password should always be encrypted and salted.  The setter bypasses this so that JPA can set the value from the
+	 * database, without doubly encrypting it.  Use @encryptPassword method, or one of the constructors instead of the
+	 * setter.
+	 */
+	@NotEmpty
+	@Length(min = 8)
+	private String password = "";
 
-	private String salt;
+	/**
+	 * This field is used in encrypting the password in order to mitigate dictionary hash attacks.
+	 */
+	@NotEmpty
+	private String salt = "";
 
-	private String userId;
+	@NotEmpty
+	private String userId = "";
 
 	public UserLogin() {
 	}
 
-	public UserLogin(boolean active, Map<String, WebUserPreference> governedBy, List<LoginAccountHistory> having, UUID loginFor, UUID loginTo, String password, String salt, String userId) {
-		this.active = active;
-		this.governedBy = governedBy;
-		this.having = having;
+	public UserLogin(String userId, String password, Option<UUID> loginFor, Option<UUID> loginTo) {
+		encryptPassword(password);
+		this.userId = userId;
 		this.loginFor = loginFor;
 		this.loginTo = loginTo;
-		this.password = encrypt(password + salt);
-		this.salt = salt;
-		this.userId = userId;
 	}
 
-	public UserLogin(UUID id, Long version, boolean active, Map<String, WebUserPreference> governedBy, List<LoginAccountHistory> having, UUID loginFor, UUID loginTo, String password, String salt, String userId) {
-		super(id, version);
-		this.active = active;
-		this.governedBy = governedBy;
-		this.having = having;
-		this.loginFor = loginFor;
-		this.loginTo = loginTo;
-		this.password = password;
-		this.salt = salt;
+	public UserLogin(String userId, String password) {
+		String salt = UUID.randomUUID().toString();
+		encryptPassword(password);
 		this.userId = userId;
 	}
 
 	public void addLoginAccountHistory(LoginAccountHistory loginAccountHistory) {
 		having.add(loginAccountHistory);
+	}
+
+	protected void encryptPassword(String password) {
+		if (isEmpty(salt)) {
+			salt = UUID.randomUUID().toString();
+		}
+		this.password = encrypt(password + salt);
+	}
+
+	public void changePassword(String newPassword) {
+		encryptPassword(newPassword);
 	}
 
 	/**
@@ -107,15 +124,14 @@ public class UserLogin extends PersistentEntity {
 		this.having = having;
 	}
 
-	@Transient
-	public LoginAccountHistory getLastLogin() {
-		return having.get(having.size() - 1);
+	public Option<LoginAccountHistory> lastLogin() {
+		return fromNull(having.get(having.size() - 1));
 	}
 
 	/**
 	 * @return the loginFor
 	 */
-	public UUID getLoginFor() {
+	public Option<UUID> getLoginFor() {
 		return loginFor;
 	}
 
@@ -123,13 +139,13 @@ public class UserLogin extends PersistentEntity {
 	 * @param loginFor the loginFor to set
 	 */
 	public void setLoginFor(UUID loginFor) {
-		this.loginFor = loginFor;
+		this.loginFor = fromNull(loginFor);
 	}
 
 	/**
 	 * @return the loginTo
 	 */
-	public UUID getLoginTo() {
+	public Option<UUID> getLoginTo() {
 		return loginTo;
 	}
 
@@ -137,13 +153,12 @@ public class UserLogin extends PersistentEntity {
 	 * @param loginTo the loginTo to set
 	 */
 	public void setLoginTo(UUID loginTo) {
-		this.loginTo = loginTo;
+		this.loginTo = fromNull(loginTo);
 	}
 
 	/**
 	 * @return the password
 	 */
-	@NotEmpty
 	public String getPassword() {
 		return password;
 	}
@@ -158,7 +173,6 @@ public class UserLogin extends PersistentEntity {
 	/**
 	 * @return the userId
 	 */
-	@NotEmpty
 	public String getUserId() {
 		return userId;
 	}
@@ -184,6 +198,7 @@ public class UserLogin extends PersistentEntity {
 	public void setId(Long id) {
 		this.setId(id);
 	}
+
 
 	public String getSalt() {
 		return salt;
