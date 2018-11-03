@@ -1,9 +1,11 @@
 package erp_microservices.e_commerce.repositories;
 
 import erp_microservices.e_commerce.models.productdescriptions.ObjectType;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
-public interface ObjectTypeRepository extends CrudRepository<ObjectType, UUID> {
+@Repository
+public interface ObjectTypeRepository extends JpaRepository<ObjectType, UUID> {
 }

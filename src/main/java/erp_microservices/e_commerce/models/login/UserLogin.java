@@ -1,6 +1,5 @@
 package erp_microservices.e_commerce.models.login;
 
-import erp_microservices.jpa.converters.OptionToUuidConverter;
 import erp_microservices.model.PersistentEntity;
 import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -11,7 +10,6 @@ import java.util.*;
 
 import static erp_microservices.encryption.Encrypter.encrypt;
 import static fj.data.Option.fromNull;
-import static fj.data.Option.none;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 /**
@@ -35,17 +33,16 @@ public class UserLogin extends PersistentEntity {
 	@OrderBy(value = "loggedInFrom")
 	private List<LoginAccountHistory> having = new ArrayList<LoginAccountHistory>();
 
+
 	/**
 	 * UUID for Party the user login belongs to.
 	 */
-	@Convert(converter = OptionToUuidConverter.class)
-	private Option<UUID> loginFor = none();
+	private UUID loginFor = null;
 
 	/**
 	 * UUID for WebAddress this login is for.
 	 */
-	@Convert(converter = OptionToUuidConverter.class)
-	private Option<UUID> loginTo = none();
+	private UUID loginTo = null;
 
 	/**
 	 * The password should always be encrypted and salted.  The setter bypasses this so that JPA can set the value from the
@@ -66,13 +63,6 @@ public class UserLogin extends PersistentEntity {
 	private String userId = "";
 
 	public UserLogin() {
-	}
-
-	public UserLogin(String userId, String password, Option<UUID> loginFor, Option<UUID> loginTo) {
-		encryptPassword(password);
-		this.userId = userId;
-		this.loginFor = loginFor;
-		this.loginTo = loginTo;
 	}
 
 	public UserLogin(String userId, String password) {
@@ -132,28 +122,29 @@ public class UserLogin extends PersistentEntity {
 	 * @return the loginFor
 	 */
 	public Option<UUID> getLoginFor() {
-		return loginFor;
+		return fromNull(loginFor);
 	}
 
 	/**
 	 * @param loginFor the loginFor to set
 	 */
-	public void setLoginFor(UUID loginFor) {
-		this.loginFor = fromNull(loginFor);
+	public void setLoginFor(Option<UUID> loginFor) {
+		this.loginFor = loginFor.toNull();
 	}
+
 
 	/**
 	 * @return the loginTo
 	 */
 	public Option<UUID> getLoginTo() {
-		return loginTo;
+		return fromNull(loginTo);
 	}
 
 	/**
 	 * @param loginTo the loginTo to set
 	 */
-	public void setLoginTo(UUID loginTo) {
-		this.loginTo = fromNull(loginTo);
+	public void setLoginTo(Option<UUID> loginTo) {
+		this.loginTo = loginTo.toNull();
 	}
 
 	/**
@@ -206,5 +197,13 @@ public class UserLogin extends PersistentEntity {
 
 	public void setSalt(String salt) {
 		this.salt = salt;
+	}
+
+	public void setLoginFor(final UUID loginFor) {
+		this.loginFor = loginFor;
+	}
+
+	public void setLoginTo(final UUID loginTo) {
+		this.loginTo = loginTo;
 	}
 }
